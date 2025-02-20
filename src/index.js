@@ -28,6 +28,52 @@ app.use(express.json());
 // 'path.join(__dirname, '../assets')' construit le chemin absolu vers le dossier 'assets'
 app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
+//Route GET pokemon by ID
+app.get("/api/pokemon/get/:id", (req, res) => {
+  let response = pokemonsList[req.params.id - 1]
+  if (response != null)
+    res.status(200).send(response);
+  else
+    res.status(404).send("Can't find pokemon for id " + req.params.id)
+});
+
+//Route POST create pokemon
+app.post("/api/pokemon/create", (req, res) => {
+
+  res.status(200).send("Pokemon successfuly created");
+})
+
+//Route PUT update a pokemon
+app.put("/api/pokemon/modify/:id", (req, res) => {
+  let id = req.params.id -1
+  if (pokemonsList[id] == null) {
+    res.status(404).send("Can't find pokemon for id " + req.params.id)
+    return;
+  } else {
+    console.log(req.body)
+    pokemonsList[id] = req.body
+  }
+  if (!reWritePokemonFile()) {
+    res.status(500).send("Internal server error " + req.params.id)
+  }
+  res.status(200).send("Pokemon successfuly modified")
+})
+
+//Route DELETE a pokemon
+app.delete("/api/pokemon/delete/:id", (req, res) => {
+  let id = req.params.id -1
+  if (pokemonsList[id] == null) {
+    res.status(404).send("Can't find pokemon for id " + req.params.id)
+  } else {
+    delete pokemonsList[id]
+    res.status(200).send("Pokemon successfuly deleted")
+  }
+  if (!reWritePokemonFile()) {
+    res.status(500).send("Internal server error " + req.params.id)
+  }
+  
+})
+
 // Route GET de base
 app.get("/api/pokemons", (req, res) => {
   res.status(200).send({
@@ -55,10 +101,30 @@ app.get("/api/pokemons", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("bienvenue sur l'API Pokémon");
+  res.status(200).send("bienvenue sur l'API Pokémon");
 });
 
 // Démarrage du serveur
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
+
+
+function reWritePokemonFile() {
+  //console.log(pokemonsList[0])
+  try {
+    // Convertir la liste en JSON avec une indentation de 2 espaces
+    const pokemonsJson = JSON.stringify(pokemonsList, null, 2);
+    
+    // Utiliser un chemin absolu pour écrire le fichier
+    const filePath = path.join(__dirname, './data/pokemons.json');
+    
+    // Écrire le fichier JSON
+    fs.writeFileSync(filePath, pokemonsJson);
+    
+    return true
+  } catch (error) {
+      console.error('Erreur lors de la génération du fichier JSON :', error);
+      return false
+  }
+}
