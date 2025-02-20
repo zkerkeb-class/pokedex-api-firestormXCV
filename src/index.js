@@ -29,50 +29,16 @@ app.use(express.json());
 app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
 //Route GET pokemon by ID
-app.get("/api/pokemon/get/:id", (req, res) => {
-  let response = pokemonsList[req.params.id - 1]
+app.get("/api/pokemons/:id", (req, res) => {
+  let response = pokemonsList[parseInt(req.params.id) - 1]
   if (response != null)
     res.status(200).send(response);
   else
-    res.status(404).send("Can't find pokemon for id " + req.params.id)
+  res.status(404).send({
+    type: "ERROR",
+    message :("Can't find pokemon for id " + req.params.id)
+  });
 });
-
-//Route POST create pokemon
-app.post("/api/pokemon/create", (req, res) => {
-
-  res.status(200).send("Pokemon successfuly created");
-})
-
-//Route PUT update a pokemon
-app.put("/api/pokemon/modify/:id", (req, res) => {
-  let id = req.params.id -1
-  if (pokemonsList[id] == null) {
-    res.status(404).send("Can't find pokemon for id " + req.params.id)
-    return;
-  } else {
-    console.log(req.body)
-    pokemonsList[id] = req.body
-  }
-  if (!reWritePokemonFile()) {
-    res.status(500).send("Internal server error " + req.params.id)
-  }
-  res.status(200).send("Pokemon successfuly modified")
-})
-
-//Route DELETE a pokemon
-app.delete("/api/pokemon/delete/:id", (req, res) => {
-  let id = req.params.id -1
-  if (pokemonsList[id] == null) {
-    res.status(404).send("Can't find pokemon for id " + req.params.id)
-  } else {
-    delete pokemonsList[id]
-    res.status(200).send("Pokemon successfuly deleted")
-  }
-  if (!reWritePokemonFile()) {
-    res.status(500).send("Internal server error " + req.params.id)
-  }
-  
-})
 
 // Route GET de base
 app.get("/api/pokemons", (req, res) => {
@@ -99,6 +65,55 @@ app.get("/api/pokemons", (req, res) => {
     pokemons: pokemonsList,
   });
 });
+
+//Route POST create pokemon
+app.post("/api/pokemons", (req, res) => {
+
+  res.status(200).send("Pokemon successfuly created");
+})
+
+//Route PUT update a pokemon
+app.put("/api/pokemons/:id", (req, res) => {
+  let id = parseInt(req.params.id) -1
+  if (pokemonsList[id] == null) {
+    res.status(404).send({
+      type: "ERROR",
+      message :("Can't find pokemon for id " + req.params.id)
+    });
+    return;
+  } else {
+    console.log(req.body)
+    pokemonsList[id] = req.body
+  }
+  if (!reWritePokemonFile()) {
+    res.status(500).send({
+      type: "ERROR",
+      message :("Internal server error " + req.params.id)
+    });
+  }
+  res.status(200).send("Pokemon successfuly modified")
+})
+
+//Route DELETE a pokemon
+app.delete("/api/pokemons/:id", (req, res) => {
+  let id = parseInt(req.params.id -1)
+  if (pokemonsList[id] == null) {
+    res.status(404).send({
+      type: "ERROR",
+      message :("Can't find pokemon for id " + req.params.id)
+    });
+  } else {
+    delete pokemonsList[id]
+    res.status(200).send("Pokemon successfuly deleted")
+  }
+  if (!reWritePokemonFile()) {
+    res.status(500).send({
+      type: "ERROR",
+      message :("Internal server error " + req.params.id)
+    });
+  }
+  
+})
 
 app.get("/", (req, res) => {
   res.status(200).send("bienvenue sur l'API Pokémon");
