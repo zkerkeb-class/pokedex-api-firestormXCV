@@ -1,6 +1,6 @@
 # Pokédex Back-End – FirestormXCV
 
-Bienvenue sur le dépôt back-end du projet Pokédex développé par FirestormXCV. Cette API RESTful fournit les données nécessaires à l'application front-end pour afficher, ajouter, modifier et comparer des Pokémon.
+Bienvenue sur le dépôt back-end du projet Pokédex développé par Thomas Pasquier. Cette API RESTful fournit les données nécessaires à l'application front-end pour afficher, ajouter, modifier et comparer des Pokémon.
 
 ## 🧩 Description du projet
 
@@ -38,17 +38,29 @@ Ce projet est une API RESTful construite avec Node.js et Express.js, permettant 
    cd pokedex-api-firestormXCV
    ```
 
-Installer les dépendances
+2. **Installer les dépendances**
 
    ```bash
    npm install
    ```
-Lancer le serveur
+3. **Lancer le serveur**
 
    ```bash
    npm start
    ```
 Le serveur sera accessible à l'adresse http://localhost:5000.
+
+4. **Généré les pokemons**
+
+   ```bash
+   npm run generate-pokemons
+   ```
+
+5. **Initialiser la base de données**
+
+- Créer une Base de données dans votre MongoDB appelé "Pokedex"
+- Créer une Collection appelée users
+- Créer une Collection appelée pokemons
 
 ### 📚 Documentation de l'API
 
