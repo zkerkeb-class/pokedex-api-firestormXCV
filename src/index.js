@@ -1,145 +1,146 @@
 import express from "express";
 import cors from "cors";
-import fs from 'fs';
-import path from "path";
-import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import connectDB from "./config/db.js";
+import pokemonRoutes from "./routes/pokemonRoutes.js";
+import path from "path";
+import jwt from "jsonwebtoken"
+import bcrypt from "bcryptjs"
+import { fileURLToPath } from "url";
+import cookieParser from 'cookie-parser'; 
+import User from './models/Users.js';
 
-dotenv.config();
-
-// Lire le fichier JSON
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const pokemonsList = JSON.parse(fs.readFileSync(path.join(__dirname, './data/pokemons.json'), 'utf8'));
 
+// Configuration des variables d'environnement
+dotenv.config();
+
+// Connexion à MongoDB
+connectDB();
+
+// Configuration d'Express
 const app = express();
-const PORT = 3000;
-
-// Middleware pour CORS
-app.use(cors());
+const PORT = process.env.PORT || 3000;
 
 // Middleware pour parser le JSON
 app.use(express.json());
 
-// Middleware pour servir des fichiers statiques
-// 'app.use' est utilisé pour ajouter un middleware à notre application Express
-// '/assets' est le chemin virtuel où les fichiers seront accessibles
-// 'express.static' est un middleware qui sert des fichiers statiques
-// 'path.join(__dirname, '../assets')' construit le chemin absolu vers le dossier 'assets'
+// Middleware pour stocker dans les cookies HTTPOnly
+app.use(cookieParser());
+
+const users = [
+  {
+    id: 1,
+    username: 'admin',
+    password: 'password123', // "password123"
+    role: 'admin'
+  }
+];
+
+
 app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
-//Route GET pokemon by ID
-app.get("/api/pokemons/:id", (req, res) => {
-  let response = pokemonsList[parseInt(req.params.id) - 1]
-  if (response != null)
-    res.status(200).send(response);
-  else
-  res.status(404).send({
-    type: "ERROR",
-    message :("Can't find pokemon for id " + req.params.id)
-  });
-});
+// Configuration CORS
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "*",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
 
-// Route GET de base
-app.get("/api/pokemons", (req, res) => {
-  res.status(200).send({
-    types: [
-      "fire",
-      "water",
-      "grass",
-      "electric",
-      "ice",
-      "fighting",
-      "poison",
-      "ground",
-      "flying",
-      "psychic",
-      "bug",
-      "rock",
-      "ghost",
-      "dragon",
-      "dark",
-      "steel",
-      "fairy",
-    ],
-    pokemons: pokemonsList,
-  });
-});
+// Routes
+app.use("/api/pokemons", pokemonRoutes);
 
-//Route POST create pokemon
-app.post("/api/pokemons", (req, res) => {
-
-  res.status(200).send("Pokemon successfuly created");
-})
-
-//Route PUT update a pokemon
-app.put("/api/pokemons/:id", (req, res) => {
-  let id = parseInt(req.params.id) -1
-  if (pokemonsList[id] == null) {
-    res.status(404).send({
-      type: "ERROR",
-      message :("Can't find pokemon for id " + req.params.id)
-    });
-    return;
-  } else {
-    console.log(req.body)
-    pokemonsList[id] = req.body
-  }
-  if (!reWritePokemonFile()) {
-    res.status(500).send({
-      type: "ERROR",
-      message :("Internal server error " + req.params.id)
-    });
-  }
-  res.status(200).send("Pokemon successfuly modified")
-})
-
-//Route DELETE a pokemon
-app.delete("/api/pokemons/:id", (req, res) => {
-  let id = parseInt(req.params.id -1)
-  if (pokemonsList[id] == null) {
-    res.status(404).send({
-      type: "ERROR",
-      message :("Can't find pokemon for id " + req.params.id)
-    });
-  } else {
-    delete pokemonsList[id]
-    res.status(200).send("Pokemon successfuly deleted")
-  }
-  if (!reWritePokemonFile()) {
-    res.status(500).send({
-      type: "ERROR",
-      message :("Internal server error " + req.params.id)
-    });
-  }
-  
-})
-
+// Route de base
 app.get("/", (req, res) => {
-  res.status(200).send("bienvenue sur l'API Pokémon");
+  res.send("Bienvenue sur l'API Pokémon avec MongoDB");
 });
 
 // Démarrage du serveur
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Serveur démarré sur http://0.0.0.0:${PORT}`);
 });
 
 
-function reWritePokemonFile() {
-  //console.log(pokemonsList[0])
+// Route de connexion
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+
   try {
-    // Convertir la liste en JSON avec une indentation de 2 espaces
-    const pokemonsJson = JSON.stringify(pokemonsList, null, 2);
-    
-    // Utiliser un chemin absolu pour écrire le fichier
-    const filePath = path.join(__dirname, './data/pokemons.json');
-    
-    // Écrire le fichier JSON
-    fs.writeFileSync(filePath, pokemonsJson);
-    
-    return true
-  } catch (error) {
-      console.error('Erreur lors de la génération du fichier JSON :', error);
-      return false
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ message: 'Identifiants invalides' });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Identifiants invalides' });
+    }
+    const payload = {
+      user: {
+        id: user._id,
+        username: user.username,
+        role: user.role
+      }
+    };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      maxAge: 60 * 60 * 1000
+    });
+    res.status(200).json({ message: 'Connexion réussie' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
   }
-}
+});
+
+// Route déconnexion
+app.post('/api/logout', async (req, res) => {
+  res.clearCookie('token');
+  res.status(200).json({ message: 'Déconnexion réussie' });
+});
+
+
+// Route d'inscription
+app.post('/api/register', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const existingUser = await User.findOne({ username });
+    if (existingUser) return res.status(400).json({ message: 'Cet utilisateur existe déjà' });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+      role: 'user'
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ message: 'Utilisateur créé avec succès' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+
+// Route pour récupérer l'utilisateur connecté
+app.get('/api/me', (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) return res.status(401).json({ message: 'Token manquant' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ user: decoded.user });
+  } catch (err) {
+    res.status(401).json({ message: 'Token invalide' });
+  }
+});
+
+
+
+
