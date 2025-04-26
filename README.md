@@ -61,6 +61,7 @@ Le serveur sera accessible à l'adresse http://localhost:5000.
 - Créer une Base de données dans votre MongoDB appelé "Pokedex"
 - Créer une Collection appelée users
 - Créer une Collection appelée pokemons
+- Insérer un document: le fichier ./src/data/pokemon.json (**différant de celui du sujet**) dans la Collection pokemons
 
 ### 📚 Documentation de l'API
 
